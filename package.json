@@ -1,0 +1,15 @@
+{
+  "name": "node-project",
+  "version": "1.0.0",
+  "description": "for practicing node and express",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "nishant jangid",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "morgan": "^1.10.0"
+  }
+}
