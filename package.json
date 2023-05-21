@@ -1,10 +1,10 @@
 {
   "name": "node-project",
   "version": "1.0.0",
-  "description": "for practicing node and express",
+  "description": "for practicing node and express and mongodb",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "nodemon server.js"
   },
   "author": "nishant jangid",
   "license": "ISC",
