@@ -4,7 +4,7 @@
   "description": "for practicing node and express and mongodb",
   "main": "app.js",
   "scripts": {
-    "start:dev": "nodemon server.js",
+    "start": "nodemon server.js",
     "start:prod": "NODE_ENV=production nodemon server.js"
   },
   "author": "nishant jangid",
@@ -12,6 +12,7 @@
   "dependencies": {
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
+    "mongoose": "^7.2.0",
     "morgan": "^1.10.0"
   }
 }
