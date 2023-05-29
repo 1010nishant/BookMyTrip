@@ -1,46 +1,52 @@
-## Create Tour
+Let's dive deeper into working on our API and implementing features that enhance its usability. we'll start with filtering, which allows users to narrow down the data they receive by utilizing a `query string`.
+Filtering makes the most sense in the "get all tours" route, which, as the name suggests, retrieves all tours. We want to enable users to filter the data, so instead of receiving all tours, they can specify criteria and obtain only the matching results.
 
-In this lecture, we will explore a more efficient and improved way to create documents in the database as we implement our create tour handler.
+The query string structure consists of a question mark followed by field-value pairs. For instance, to filter for tours with a duration of five and a difficulty level of easy, we construct a query string like this: `?duration=5&difficulty=easy`. Postman automatically recognizes and parses the query string, displaying the key-value pairs in the Params tab.
 
-To begin, we will implement the `createTour` function, which is the handler function called when there is a POST request to the tours route. Previously, we had a `checkBody` function to validate the body, However, with the introduction of Mongoose models, this validation can be handled by the model itself so we can remove it.
+Now, we need to access this data within our Express application. Thankfully, Express simplifies this process by providing a built-in solution. The data from the query string can be accessed through the request object, specifically the "query" field. By accessing `req.query` we retrieve an object containing the parsed data from the query string.
 
-Instead of manually creating a new document using `newTour = new Tour(data)` and then saving it with `newTour.save()`, we can use a simpler approach. By utilizing the `create` method provided by the Tour model, we can pass the data directly. This achieves the same result as before, but the main difference is that in the first version, we called the method on the new document, whereas in the second version, we call it directly on the model.
+let's discuss two different methods of writing database queries in Mongoose.
 
-we can leverage `async/await` for more readable and concise code. By marking the function as `async`, we can use await to wait for the promise returned by `Tour.create` to resolve, and the resulting document will be stored in the `newTour` variable.
+The first method involves using a filter object, as we have previously seen in the MongoDB introduction section. We utilize the `find()` method and pass a filter object as a parameter. This method works similarly to a regular MongoDB query. For example, we can specify `duration: 5` and `difficulty: easy` to create a filter object that matches our previous query string.
+just like:
 
-To pass real data to the create method, instead of using an empty object, we can use req.body, which represents the data received in the POST request. So, the data from the request body is directly stored in the database using the create method of the Tour model. The method returns a promise, which we can then await to obtain the newly created document with its assigned ID.
+```js
+const tours = await Tour.find({
+  duration: 5,
+  difficulty: "easy",
+});
+```
 
-While this implementation is more concise and readable, we need to handle errors. With `async/await`, error handling is done using the `try/catch` syntax. We wrap our code in the `try` block and `catch` any potential errors in the catch block.
+The second method employs special Mongoose methods that allow us to construct queries more dynamically. We start similarly with the "find" method, but then we chain additional methods to build the query. Using the `where` method, we can specify individual conditions. For instance, we can chain `where('duration').equals(5)` and `where('difficulty').equals('easy')` to recreate the same query as before. This method offers flexibility with various operators and additional functionalities like sorting and limiting results.
+just like:
 
-we have created a tour using Mongoose. The tour object has properties such as rating, name, price, and an automatically generated ID. However, two fields, difficulty and price, are missing from the schema and are therefore not included in the database. Mongoose only considers the fields defined in the schema and ignores any additional properties.
+```js
+const tours = await Tour.find()
+  .where("duration")
+  .equals(5)
+  .where("difficulty")
+  .equals("easy");
+```
 
-## read tours and tour by ID
+For the sake of simplicity and consistency, we choose to utilize the `req.query` object to implement filtering. Remarkably, this object already resembles the filter object structure we discussed. By directly passing `req.query` to our Mongoose query, we achieve the same filtering results as before.
 
-Let's start with the `getAllTours` handler. To retrieve all the tours from the database, we will utilize the Tour model. So, we use the `find` method on the Tour model. This is similar to what we learned in the MongoDB section, where we used find to query for all documents.
+However, this implementation is overly simplistic. In the future, we will introduce additional query parameters like sorting and pagination. We need to ensure that these parameters are not included in our database query. For example, if we were to add `page=2` to our query, we would receive no results because there are no documents with the page field set to 2. We want to use the page field for implementing pagination, not as a filter criterion.
 
-When we pass nothing into the find method, as we're doing here, it returns all the documents in the collection, specifically the tour collection in our case.
+To address this issue, we need to exclude these special field names from our query string before applying the filter. Here's how we'll implement it:
 
-The find method takes care of converting the returned documents into JavaScript objects.
+First, we'll create a shallow copy of the `req.query` object and call it `queryObject`. It's essential to create a hard copy, not just a reference to the original object.
 
-Moving on, let's implement the `getTour` handler. To obtain the tour ID, we need to look at the route. In this case, the request will contain the ID parameter in the route. By accessing `req.params.id`, we can retrieve that ID within the handler. We'll save it into the "tour" variable.
+To create a hard copy in JavaScript, we can utilize ES6 destructuring by using the spread operator (...) and then creating a new object. This way, we obtain a new object containing all the key-value pairs from the `req.query` object.
 
-## Updating tours
+Next, we'll create an array called `excludedFields` that includes all the fields we want to exclude from the query. In this case, we want to exclude page, sort, limit, and fields.
 
-Now,in `updateTour`, within the try block, our first task is to query for the specific document we want to update. Thankfully, with the help of Mongoose, we can combine the querying and updating steps into a single command. Similar to finding a document by ID, we can utilize the `findByIdAndUpdate`method. Let's write `Tour.findByIdAndUpdate` and pass in the `ID` of the document we want to update as `req.params.ID`. The data we want to change is available in the request body, `req.body`. Additionally, we can provide a third argument, an `options object`. In this case, we want to set the new option to true to ensure that the updated document is returned.
+We'll iterate over the `excludedFields` array using the `forEach` method. For each element, we'll use the `delete` operator to remove the corresponding field from the `queryObject`.
 
-Awaiting the result of this query, let's assign it to a new variable called tour to represent the updated document. It's important to note that all the methods we have used so far on the tour object, such as findById and update, return queries. These query methods can be explored in the Mongoose documentation, which provides details on their usage.
+Finally, we'll log both `req.query` and `queryObject` to ensure that our logic functions as expected.
 
-One important option to consider is `runValidators`. By setting this option to true, the validators specified in the schema will run each time a document is updated.
+By examining the logs, we can confirm that our `queryObject` only contains the difficulty field, while the original `req.query` retains all the fields. This means that instead of using `req.query`, we'll now use `queryObject` for our filtering.
 
-In the doc. of Node, You might have noticed the line `model.prototype.save`. We have actually encountered this line before when we first started working with Mongoose. In JavaScript, `model.prototype` refers to an object created from a class or, in this case, a model. Therefore, the `save`method here pertains to saving a document, not a tour itself.
+Additionally, we need to understand how queries work in Mongoose. The `find` method returns a query object, which allows us to chain other methods such as `where, equals`, and more.
+However, when we `await` the query's result, the query is executed and returns the matching documents. If we immediately `await` the query as we did previously, we won't be able to implement sorting, pagination, or other features. Instead, we need to save the initial query without awaiting it and then chain the necessary methods to the query. Only at the end should we `await` the final query.
 
-To illustrate, let's refer back to the code where we created a new tour object from the tour model. In that example, we had a variable named `newTour`, which was an instance of the tour model. Consequently, this `newTour` object had access to the save method since it is part of the prototype object of the class.
-Understanding the fundamentals of JavaScript is crucial to comprehending the documentation effectively.
-
-When encountering `model.prototype` in the code, it indicates that the save method will be available to all instances created through a model, rather than the model itself. For instance, if you attempted to use `tour.save`, you would encounter an error. However, if you used save on a document created through the tour model, it would work flawlessly.
-
-Keep in mind that we are performing a patch request here. In contrast, if we were to use a put request, the original object would be entirely replaced by the new one
-
-## delete a tour
-
-look at the code
+To implement this, we'll modify our code structure. We'll build the query first and then execute it by awaiting the query itself. By separating the query construction and execution, we enable the incorporation of additional features in the future.
