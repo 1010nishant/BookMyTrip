@@ -183,3 +183,35 @@ To ensure the middleware continues to the next step, we need to invoke `next()`.
 Once someone accesses the `/top-5-cheap` route, the first middleware to run is `aliasTopTours`. This function sets the specified properties of the query object, effectively prefilling parts of it before reaching the `getAllTours` handler. This way, even if the user didn't provide any parameters in the query string, the query object will already be prefilled.
 
 Essentially, this approach predefines the query string for the user, eliminating the need for them to manually input these parameters.
+
+## Refactoring code
+
+we will quickly refactor the API features we have implemented in the previous. The purpose of this refactoring is to improve code cleanliness, modularity, and reusability for future use.
+
+Currently, we have all the code for these features within the `getAllTours` function, which can be messy and difficult to understand. Moreover, if we wanted to use these same features for other resources like users or reviews, it would not be practical to copy the code and repeat it. To address these issues, we will create a class called `APIFeatures`, which will have a method for each API feature or functionality.
+
+Inside the `APIFeatures` class, we start with a `constructor` function that automatically executes when creating a new object from the class. This constructor function takes in 2 variables: the `mongoose query` and the `queryString` obtained from Express through the route's request.
+
+In the `constructor` function, we assign the query argument to `this.query` and the `queryString` argument to `this.queryString`. This establishes the initial values for the class properties.
+
+Next, we create separate methods for each functionality, starting with the `filter` method.
+
+instead of querying the tour directly, we want to add the `find` method to the existing query, which is `this.query`. So, we replace the original query with `this.query.find`.
+
+To use the class, we create a variable called `features` and instantiate a new `APIFeatures` object. This instance will have access to all the methods defined in the class. To create the query, we use `Tour.find()` and pass it to the Features object along with `req.query` as the queryString.
+
+After creating the Features object, we can apply the filter method by appending `.filter()` to the Features variable. This will execute the code for API filtering functionality.
+
+Since we have made changes to the original code, we replace `query` in the subsequent line with `features.query`. All the other methods will manipulate `features.query` to eventually obtain the desired query for execution.In the end, the modified query is stored within the `this.query` property. Finally, we can use `await` to retrieve the results.
+
+Let's proceed with the implementation of sorting. In order to achieve this, we need to chain the `sort` method after the `filter` method. However, we currently don't have anything to chain the sorting method on. The `filter` method doesn't return anything, so we need to modify it to `return` the entire object. We make the necessary changes in the code by replacing `return this` in the filtering method and the other methods as well.
+
+The next step is to implement the limiting functionality, We ensure that `return this` is present in the method to allow chaining with other methods.
+
+Moving on, we implement pagination by creating a method called `paginate`. Additionally, we notice that requesting the next page with zero results isn't an error but rather an indication that the requested page is empty. Hence, we remove the error code in this situation.
+
+To summarize the changes, we create a new object of the `APIFeatures` class. Within this object, we parse the query object and query string from Express. We then manipulate the query using the chaining methods one after another, similar to the code before the refactoring. Finally, we `await` the result of the query, which lives in the `features.query` object.
+
+Before proceeding, we test the code using Postman and confirm that it still works as expected. We remove the sort parameter and leave the limit, difficulty, duration, and price parameters to ensure everything functions correctly.
+
+Now that the route handler code is cleaner, we proceed to move it into a separate module. We create a new folder called `Utils` (short for utilities) and add a new file named `APIFeatures.js` . We export the APIFeatures class from the module.
