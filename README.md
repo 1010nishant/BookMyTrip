@@ -155,3 +155,31 @@ to implement this --> if `request.query.page` is present, we'll proceed with tes
 If the number of documents we're attempting to skip is greater than the total number of tours, it means that the requested page does not exist. In this case, we'll throw a new error with the message `This page does not exist` Throwing an error in this context will immediately move to the catch block, which will handle the error and send a 404 fail message.
 
 we've explored querying data with Mongoose, and the methods we've used are not limited to the specific features we've implemented. These techniques can be applied to various types of queries in different applications. Although we've demonstrated their usage in the context of building API features, you'll be able to utilize them in your future projects as well.
+
+## making a simple alias
+
+One valuable feature to consider adding to an API is the ability to create an alias route for frequently requested data. For instance, let's say we want to provide a dedicated route for retrieving the five best and cheapest tours. If we were to use our regular route with filters and existing features, the request might look like this:`/tours?limit=5&sort=-ratingsAverage,price`
+
+This request includes parameters to limit the response to 5 tours and sort them based on average ratings in descending order, with price as the secondary sorting criteria. Upon examining the results, we find the top five tours:
+
+Tour A: Ratings - 4.9, Price - $100
+Tour B: Ratings - 4.9, Price - $150
+Tour C: Ratings - 4.9, Price - $120
+Tour D: Ratings - 4.8, Price - $90
+Tour E: Ratings - 4.7, Price - $80
+
+Although these tours are highly rated, some may not fit the "cheap" criterion. However, since we prioritized sorting by average ratings first, and then by price in case of a tie, the results may not align with the "cheapest and best" requirement.
+
+To address this, we can create a simplified and memorable route for this frequently performed request. Let's implement this in our application by modifying the tour router. We'll add a new route named `/top-5-cheap` that accepts GET requests. Now, let's determine how to implement this functionality.
+
+To accomplish this, we can create a middleware function called `aliasTopTours`. This middleware will manipulate the incoming query object, effectively changing it before reaching the `getAllTours` handler. This is a great example of using middleware strategically to modify the request object.
+
+The `aliasTopTours` middleware is added to the `tourController` and should be placed at the top. It takes three arguments: req for the request, res for the response, and next to call the next middleware in the stack.
+
+Within the middleware, we can manipulate the query object by setting the desired properties, such as limit, sort, and specific fields. Remember that the values should be converted to strings.
+
+To ensure the middleware continues to the next step, we need to invoke `next()`. Without it, the middleware would remain stuck and not progress further.
+
+Once someone accesses the `/top-5-cheap` route, the first middleware to run is `aliasTopTours`. This function sets the specified properties of the query object, effectively prefilling parts of it before reaching the `getAllTours` handler. This way, even if the user didn't provide any parameters in the query string, the query object will already be prefilled.
+
+Essentially, this approach predefines the query string for the user, eliminating the need for them to manually input these parameters.
