@@ -1,4 +1,4 @@
-## Aggregation Intro
+# Aggregation Intro
 
 the MongoDB aggregation pipeline, a highly powerful and useful framework for data aggregation in MongoDB. The aggregation pipeline allows us to define a sequence of operations that documents from a specific collection will go through, transforming them into aggregated results step by step. It's a fantastic tool for performing various calculations, such as averages, minimum and maximum values, and even distance calculations. The capabilities of the aggregation pipeline are truly remarkable.
 
@@ -26,3 +26,27 @@ To specify what we want to `group by`, we need to provide an `identifier`. In th
 Within the group stage, we can define the fields we want to calculate. For instance, we can calculate the average rating by using the MongoDB operator for averaging `($avg)` and specifying the field name as `ratings average` Similarly, we can calculate the average price, minimum price, and maximum price using the appropriate operators.
 
 Once we've defined the stages in the aggregation pipeline, we need to send the response with the data. We can accomplish this by adding a new route in our tour routes,
+
+Great! Now that we have calculated the average rating and the price range for our tours, we can verify that the data supports these values. It's really exciting to see everything coming together!
+
+There's one more thing I want to do here. I'd like to determine the total number of ratings we have and also the total number of tours in our dataset. Let's work on that.
+
+To calculate the total number of ratings, we'll use the `sum` operator and target the `ratingsQuantity` field. It's intuitive to assume that the number of ratings is stored there, and by summing up all the values in that field, we can get the total count of ratings.
+
+Similarly, let's calculate the total number of tours. This one is a bit trickier, but I'll guide you through it. We'll still use the sum operator, but this time, we'll add 1 for each document. This means that for every document that passes through this pipeline, we'll increment the `numTours` counter by 1. This way, we can obtain the total count of tours.
+
+These statistics provide us with valuable insights into all our tours collectively.
+
+But now, let's take it a step further. As mentioned earlier, we can group our results based on different fields. Let's start by grouping them by `difficulty`. This process is quite similar to specifying the fields we want to include in our results.
+
+The first step is to specify the `difficulty` field by using the MongoDB operator `$difficulty`. This allows us to define statistics for each difficulty level. By utilizing this pipeline, we can perform various data manipulations and gain valuable insights.
+
+The aggregation pipeline provides us with the opportunity to uncover meaningful insights from our data.
+
+The pipeline also allows us to perform operations on the data. As an example, we can transform the `difficulty` field to uppercase by using the `$toUpper` operator. This demonstrates the flexibility and power of the aggregation pipeline.
+
+Moving forward, we can introduce the `sort` stage to organize the data based on specific fields. We can specify `avgPrice` as the field to sort by. It's important to note that we must use the field names specified in the `group` or just previous stage stage because the original field names are no longer accessible at this point. By sorting in ascending order (1), we can observe the lowest and highest average prices among the tours.
+
+The aggregation pipeline also supports repeating stages. We can include another `$match` stage to demonstrate this capability and introduce a new operator. In this case, we select documents where the `_id` (now representing the difficulty) is not equal to(`$ne`) `easy`. This effectively excludes the tour with the `easy` difficulty level, leaving only the `medium` and `difficult` tours.
+
+Although this specific example may not provide substantial value due to the exclusion of relevant data, it highlights the possibility of including multiple match stages within the pipeline.
