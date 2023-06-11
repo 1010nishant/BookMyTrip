@@ -50,3 +50,51 @@ Moving forward, we can introduce the `sort` stage to organize the data based on 
 The aggregation pipeline also supports repeating stages. We can include another `$match` stage to demonstrate this capability and introduce a new operator. In this case, we select documents where the `_id` (now representing the difficulty) is not equal to(`$ne`) `easy`. This effectively excludes the tour with the `easy` difficulty level, leaving only the `medium` and `difficult` tours.
 
 Although this specific example may not provide substantial value due to the exclusion of relevant data, it highlights the possibility of including multiple match stages within the pipeline.
+
+we will continue working with the aggregation pipeline and tackle a real business problem. Imagine that we are developing an application for Nature's Company, and they need a function to calculate the busiest month of a given year. This information is crucial for the company to prepare for tours by hiring tour guides, purchasing equipment, and making other necessary arrangements.
+
+To solve this business problem, we can leverage the power of aggregation pipelines in MongoDB. Our goal is to determine how many tours start in each month of the specified year. This is where the aggregation pipeline comes in handy, as it allows us to perform complex data operations and transformations.
+
+Let's start by creating the function for this task. We'll define an asynchronous function called `getMonthlyPlan` Additionally, we need to implement the corresponding route, which will accept the `year` as a URL path parameter.
+
+Once we have the `year` from the request parameters, we can proceed with the aggregation pipeline. We'll define a variable called `plan` which will await the result of the `tour.aggregate()` method.
+
+Before we continue building the pipeline, let's take a look at the complete set of results we want to achieve. By examining the existing tours, we can better understand what our pipeline needs to accomplish. Each tour has an array of start dates, and our objective is to count the number of tours for each month in the given year.
+
+For example, let's consider the year 2021. We have 9 tours in total. One tour starts in April, another in July, and the third in October. The next tour begins in June, followed by one in July and another in August. If we continue analyzing the remaining tours, we can manually tally the number of tours for each month.
+
+However, instead of doing this manually, we can leverage the power of the aggregation pipeline. MongoDB provides a stage called `unwind` which can help us achieve our goal. The unwind stage allows us to transform an array field into multiple documents, each containing one element from the array.
+
+In our case, we want to create a separate document for each start date of the tours. By doing so, we can easily count the number of tours for each month using subsequent pipeline stages.
+
+Let's take a closer look at the code and understand the process step by step.
+
+First, we are setting up a route called `monthly plan` with a specified year. Although there won't be any results initially, we need to define it. The route follows the format `monthly-plan/year` (e.g., "monthly plan/2021").
+
+Next, we send a request to retrieve the result. Previously, we had an array for the start date, but now we only have the first element. By comparing the previous and current results side by side, we can observe that each date now has its own document.
+
+Moving on, we proceed to select the documents for the specified year. This is done using the `match` stage, which is essentially a query to select documents. We search for the year within the `start dates` field. To define the range, we set the date to be greater than or equal to January 1st, 2021, and less than January 1st, 2022.
+
+To achieve this, we create a `new Date` object using the template string with the `year` variable. We compare this newly created date with the date in each document to filter the results.
+
+After testing this stage, we confirm that all the tours displayed are from the year 2021, as intended.
+
+Now, we move on to the `group` stage, where the magic happens. By adding the `group` stage, we can specify how we want to group the documents. In this case, we want to group them by the month. Currently, we have the complete date with the year, month, date, and time. However, we only need the month for our grouping`
+
+To extract the month from the date, we utilize a MongoDB aggregation pipeline operator called `month` This operator returns the month as a number. By using this operator, we can extract the month from the date field.
+
+Once the documents are grouped by month, we want to know the number of tours that start in each month. To achieve this, we use the `sum` operator to add one for each document. This way, we count the number of tours for each month.
+
+We now need to gather additional information about the tours, not just the count. To accomplish this, we'll create an `array` since we want to specify multiple tours within a single field. Each document that goes through the pipeline will have its name field pushed into this array. By doing so, we can easily access the names of the tours. Testing this modification, we can confirm that the names of all three tours are included.
+
+Next, let's add another field that will contain the same value as the ID field. This will allow us to delete the ID later on without losing this valuable information. To achieve this, we'll use the `addFields` stage. This stage is straightforward, as its purpose is to add new fields to the document. In this case, we'll create a field called `month` and assign it the value of the `_id` field.
+
+Now, let's proceed to remove the ID field. We can achieve this using the `project` stage. The `project` stage allows us to specify which fields should appear in the output document. By assigning a value of zero to the ID field, we ensure it no longer appears in the results. If we assigned a value of one, the ID field would be included.
+
+Additionally, let's sort the tours based on the number of tour starts. Although currently the data isn't entirely useful, as we should sort it by the actual number of tour starts, we'll still proceed to showcase the "sort" stage. By specifying the field name "number of tour starts" and using -1, we indicate that we want to sort in descending order, starting with the highest number. As expected, in our case, July is the busiest month with three tour starts: Forest Hiker, Sea Explorer, and Sports Lover.
+
+Lastly, we'll use the "limit" stage, which allows us to restrict the number of output documents. Here, we'll set the limit to six, meaning we'll only display six documents. Although not particularly useful in this scenario, it serves as a reference. To make it more practical, we could set the limit to 12, ensuring we include all twelve months of the year.
+
+Throughout this process, we've introduced several stages with various functionalities, and I understand that it may seem overwhelming to comprehend all of them simultaneously. However, with practice, you'll become more proficient and understand which tools to utilize in different situations. Remember, you can always refer to the comprehensive documentation, which provides excellent learning material alongside this course. This applies to all the technologies we're covering, so I encourage you to explore the documentation to enhance your understanding.
+
+Solving this challenge together has been an enjoyable experience, and I hope you've had as much fun as I have. Problem-solving like this is incredibly satisfying. However, let's not dwell on it any longer. In the upcoming sections, we'll discuss additional exciting features available to us in MongoDB, which promises to be an enjoyable learning experience.
