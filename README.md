@@ -1,45 +1,35 @@
-## authorization
+## error handling
 
-Welcome back!
+Let's discuss how to handle undefined routes in our application using Express. Before we dive into error handling, we need to address the issue of routes that don't have any assigned handlers. To begin, let's ensure that our application is running
 
-In our project so far, we have successfully implemented authentication, allowing users to log in. However, there are cases where authentication alone is not sufficient. In this video, we will address this by implementing authorization.
+For example, let's consider the URL `api/tours` instead of the expected `api/v1/tours`. In this case, Express will automatically respond with `HTML code and a 404 Not Found error` because there is no handler defined for the requested route. Similarly, if we misspell a route, such as tour instead of tours, the same error response will be returned.
 
-Authorization comes into play when we consider actions such as deleting a tour from our database. Not all users should have the privilege to perform this action, even if they are logged in. Authorization is the process of verifying whether a specific user has the necessary rights to interact with a particular resource.
+Another scenario arises when we include additional parameters after the tours route, like api/tours/something. In this case, an error related to the conversion of the parameter to a valid MongoDB object ID may occur. However, for the purpose of this discussion, let's focus on the previous situation, where we receive an HTML error response.
 
-With authorization, we check if a logged-in user is allowed to access a specific resource. This means that not all logged-in users will have the same level of access to our API. Implementing authorization is a common requirement for web applications.
+Since we are building an API, it doesn't make sense to send back HTML as a response. Therefore, we need to create a handler function to manage routes that are not caught by our defined routers. Let's navigate to the `app.js` file in our application.
 
-To achieve this, we will create another middleware function to restrict access to certain routes. For example, we want to restrict the deletion of tours to specific user roles. We will add this middleware to the stack of route handlers.
+To handle routes that are not captured by any of the defined routers, we can add a middleware function after these routers in the code. Since middleware functions are executed in the order they appear, if a request reaches this point, it means it hasn't been handled by the `tourRouter` or `userRouter`. We can create a route handler using `app.all` instead of specifying a particular HTTP method like `get, post, delete, or patch`. This allows us to handle all routes and HTTP methods in a single handler.
 
-The first middleware in the stack will always be the `protect` middleware, which checks if a user is logged in. Even if an administrator attempts to delete a tour, they still need to be authenticated. Following that, we will include the `restrictTo` middleware from the `authController` module.
+To implement this, we use `app.all('*', (req, res, next) => { ... })`. The asterisk `(*)` acts as a wildcard, matching any route that hasn't been handled before. Inside the handler, we want to send a `JSON response instead of HTML`. We can achieve this by using `res.status(404).json({ status: 'fail', message: Can't find ${req.originalUrl} })`. The req.originalUrl property holds the URL that was requested.
 
-The `restrictTo` middleware will take user roles as arguments to determine who is authorized to interact with the resource. In this case, we want only administrators to be able to delete tours. We define the user roles using strings, such as `admin`
+But why does this approach work? The key lies in understanding the request-response cycle and how middleware is added to the middleware stack. Middleware is added in the order it is defined in our code. In this case, the code we are examining runs first. If the route was matched earlier in our `tourRouter`, the request would never reach this point, and the subsequent code would not be executed. Therefore, it is crucial to place this code as the final part, after all other routes have been defined and processed.
 
-We need to update our user model to include the role property. We will use the `enum` validator to restrict the allowed roles to a specific set. In our case, we have `user` `guide` `lead-guide` and `administrator` The user roles can vary depending on the application's domain.
+To demonstrate this, let's imagine we move this code to the top of our application. In doing so, regardless of the request we make, we will always receive the same response.
 
-Additionally, we set a default role, so we don't have to specify the role every time we create a new user. The default role we set is `user`
+![](/tut-img/errorhandlingoverview.png)
 
-Now that we have set up the roles, we can modify the `restrictTo` middleware to allow multiple arguments. In this case, we want both the `admin` and the `lead guide` to be able to delete tours. We update the middleware accordingly.
+In the course thus far, we have not effectively handled errors in a centralized manner within our application. Previously, when something went wrong, we would simply send back an error message as JSON in each route handler. In this section, we will address this issue and improve our error handling approach.
 
-To handle passing arguments to the middleware, we create a wrapper function that returns the actual middleware function. This allows us to pass the desired roles as arguments to the middleware, which is not typically possible.
+Before diving into the implementation details, let's take a moment to gain a high-level understanding of error handling in Express. We can categorize errors into two types: `operational errors and programming errors`.
 
-The following is an extensive explanation of the code and its functionality:
+Operational errors are foreseeable issues that can occur at some point in the future. They are not bugs in our code but rather depend on factors such as user actions, the system, or the network. Examples of operational errors include a user accessing an invalid route, providing invalid input data, or the application failing to connect to the database. It is essential to handle these errors proactively to prepare our application for such scenarios. While some people distinguish between errors and exceptions conceptually, we will use the term "errors" interchangeably with "exceptions" in this course to avoid confusion.
 
-To understand the code, let's break it down step by step.
+On the other hand, programming errors are bugs introduced by developers in the code. These errors arise from mistakes like attempting to access properties from an undefined variable, using "await" without an "async" function, or accidentally using "request.query" instead of "request.body." Programming errors are inevitable but more challenging to identify and handle effectively.
 
-First, let's talk about the purpose of the code. It aims to restrict access to certain routes based on the user's role. It ensures that only users with specific roles specified in an array are granted permission to access protected routes.
+When discussing error handling with Express, we primarily focus on operational errors since they are easier to catch and handle within our Express application. Express provides built-in error handling capabilities. We need to create a global Express error handling middleware, which will catch errors from various parts of the application. Whether the error originates from a route handler, a model validator, or elsewhere, the goal is to funnel all these errors into a centralized error handling middleware. This way, we can send a clear response to the client, informing them about the error that occurred.
 
-The code begins by defining a function using the ES6 rest parameter syntax`(...roles)`. This syntax allows the function to accept any number of arguments and store them in an array. These arguments represent the `roles` that are allowed to interact with the protected route.
+It's important to note that error handling can involve different actions depending on the situation. In some cases, handling means sending a response to inform the user about the error. However, it can also involve retrying the operation, crashing the server, or even ignoring the error altogether if that is the most appropriate course of action.
 
-Inside this function, a middleware function is returned. The middleware function has access to the roles array due to the concept of closure.
+The advantage of having a global error handling middleware in Express is that it enables a clear separation of concerns. We no longer need to worry about error handling in our business logic, controllers, or any other part of the application. Instead, we can pass the errors down to the error handler, which will then determine the next steps to take based on the error received.
 
-The middleware function takes three parameters: `request, response, and next`. These parameters are standard for Express middleware functions.
-
-Within the middleware function, the current user's role is retrieved from the request object, specifically from `request.user.role`.
-
-The middleware then checks if the current `user's role` is included in the `roles` array using the includes method. If the user's role is not found in the `roles array`, it means they do not have permission to access the route. In this case, an error is created with a status code of `403(forbidden)`, and the next middleware is not called.
-
-If the user's role is included in the `roles array`, the middleware function calls the next middleware, allowing the user to proceed to the protected route.
-
-To summarize, this code creates a middleware function called restrictTo that restricts access to certain routes based on the user's role. It receives an array of roles as input and checks if the current user's role is included in that array. If the user's role is not found, they are denied access with a 403 status code. Otherwise, they are allowed to proceed to the next middleware and access the protected route.
-
-It's important to note that this code is just an example, and in a real-world scenario, you would likely have more complex logic and additional security measures in place to handle role-based access control.
+With this understanding, we can now proceed to implement the improved error handling approach in our application.
